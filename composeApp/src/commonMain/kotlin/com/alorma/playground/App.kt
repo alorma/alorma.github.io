@@ -12,12 +12,16 @@ import org.koin.dsl.koinConfiguration
 @Composable
 fun App(
   modifier: Modifier = Modifier,
+  username: String,
 ) {
   KoinMultiplatformApplication(
-    config = koinConfiguration { modules(appModule) },
+    config = koinConfiguration {
+      modules(appModule)
+      properties(mapOf("username" to username))
+    },
   ) {
     MaterialTheme {
-
+      // Main content will go here
     }
   }
 }
