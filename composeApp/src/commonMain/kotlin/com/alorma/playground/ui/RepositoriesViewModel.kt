@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.alorma.playground.domain.model.Repository
 import com.alorma.playground.domain.usecase.GetGitHubPagesRepositoriesUseCase
+import com.alorma.playground.navigation.NavigationDelegate
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
@@ -12,7 +13,8 @@ import kotlinx.coroutines.flow.stateIn
 
 class RepositoriesViewModel(
   private val username: String,
-  private val getGitHubPagesRepositoriesUseCase: GetGitHubPagesRepositoriesUseCase
+  private val getGitHubPagesRepositoriesUseCase: GetGitHubPagesRepositoriesUseCase,
+  private val navigationDelegate: NavigationDelegate,
 ) : ViewModel() {
 
   val state: StateFlow<UiState> = flow {

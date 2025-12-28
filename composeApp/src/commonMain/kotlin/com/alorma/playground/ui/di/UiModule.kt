@@ -8,7 +8,8 @@ val uiModule = module {
     viewModel { params ->
         RepositoriesViewModel(
             username = params.get(),
-            getGitHubPagesRepositoriesUseCase = get()
+            getGitHubPagesRepositoriesUseCase = get(),
+            navigationDelegate = get()
         )
     }
 }
