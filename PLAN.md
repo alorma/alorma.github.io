@@ -15,7 +15,9 @@
 **Tech Stack:**
 - UI: Standard Compose Material3 components
 - Data Layer: Ktor HTTP client
-- Architecture: MVP (Model-View-Presenter)
+- Architecture: MVVM (Model-View-ViewModel)
+- Dependency Injection: Koin Multiplatform
+- State Management: ViewModel with StateFlow
 
 **Features:**
 - Query GitHub repositories for user "alorma"
@@ -35,7 +37,8 @@
 ✅ **UI**: Standard Compose Material3 components (Scaffold, LazyColumn, ListItem)
 ✅ **API**: GitHub REST API v3 - GET /users/alorma/repos
 ✅ **Filtering**: Check "homepage" field contains "alorma.github.io"
-✅ **Architecture**: MVP pattern
+✅ **Architecture**: MVVM with ViewModel and StateFlow
+✅ **Dependency Injection**: Koin Multiplatform
 
 ## Implementation Plan
 
@@ -52,10 +55,13 @@
 - Ktor serialization (kotlinx.json)
 - kotlinx-serialization-json
 - kotlinx-serialization plugin
+- Koin core
+- Koin compose multiplatform
 
 **Versions:**
 - Ktor: 3.0.3 (latest with WASM support)
 - kotlinx-serialization: 1.7.3
+- Koin: 4.0.0 (multiplatform support)
 
 ### Step 2: Data Layer (Model)
 
@@ -80,24 +86,64 @@ data class GitHubRepository(
 - Configure JSON serialization
 - Handle errors gracefully
 
-### Step 3: Presentation Layer (Presenter)
+### Step 3: Dependency Injection Setup (Koin)
 
-**Create: `composeApp/src/commonMain/kotlin/com/alorma/playground/presentation/RepositoryListPresenter.kt`**
+**Create: `composeApp/src/commonMain/kotlin/com/alorma/playground/di/AppModule.kt`**
 ```kotlin
-class RepositoryListPresenter(private val api: GitHubApi) {
+val appModule = module {
+    single<GitHubApi> { GitHubApiImpl(get()) }
+    single {
+        HttpClient {
+            install(ContentNegotiation) {
+                json(Json {
+                    ignoreUnknownKeys = true
+                })
+            }
+        }
+    }
+    viewModel { RepositoryListViewModel(get()) }
+}
+```
+
+**Update: `composeApp/src/commonMain/kotlin/com/alorma/playground/main.kt`**
+- Initialize Koin before starting the app
+```kotlin
+fun main() {
+    startKoin {
+        modules(appModule)
+    }
+    ComposeViewport {
+        App()
+    }
+}
+```
+
+### Step 4: Presentation Layer (ViewModel)
+
+**Create: `composeApp/src/commonMain/kotlin/com/alorma/playground/presentation/RepositoryListViewModel.kt`**
+```kotlin
+class RepositoryListViewModel(
+    private val api: GitHubApi
+) : ViewModel() {
     private val _state = MutableStateFlow<UiState>(UiState.Loading)
     val state: StateFlow<UiState> = _state
 
-    suspend fun loadRepositories() {
-        _state.value = UiState.Loading
-        try {
-            val repos = api.getRepositories("alorma")
-            val filtered = repos.filter {
-                it.homepage?.contains("alorma.github.io") == true
+    init {
+        loadRepositories()
+    }
+
+    fun loadRepositories() {
+        viewModelScope.launch {
+            _state.value = UiState.Loading
+            try {
+                val repos = api.getRepositories("alorma")
+                val filtered = repos.filter {
+                    it.homepage?.contains("alorma.github.io") == true
+                }
+                _state.value = UiState.Success(filtered)
+            } catch (e: Exception) {
+                _state.value = UiState.Error(e.message ?: "Unknown error")
             }
-            _state.value = UiState.Success(filtered)
-        } catch (e: Exception) {
-            _state.value = UiState.Error(e.message ?: "Unknown error")
         }
     }
 }
@@ -109,14 +155,14 @@ sealed class UiState {
 }
 ```
 
-### Step 4: View Layer (UI)
+### Step 5: View Layer (UI)
 
 **Update: `composeApp/src/commonMain/kotlin/com/alorma/playground/App.kt`**
 - Create Scaffold with TopAppBar
 - Use LazyColumn for repository list
 - Show loading/error states
-- Initialize presenter and collect state
-- Use lifecycle-aware composition
+- Inject ViewModel using Koin (`koinViewModel()`)
+- Collect state using `collectAsState()`
 
 **Create: `composeApp/src/commonMain/kotlin/com/alorma/playground/ui/RepositoryListItem.kt`**
 ```kotlin
@@ -135,7 +181,7 @@ fun RepositoryListItem(
 }
 ```
 
-### Step 5: Platform-Specific URL Opening
+### Step 6: Platform-Specific URL Opening
 
 **Create: `composeApp/src/commonMain/kotlin/com/alorma/playground/platform/UrlOpener.kt`**
 ```kotlin
@@ -149,12 +195,13 @@ actual fun openUrl(url: String) {
 }
 ```
 
-### Step 6: Update CLAUDE.md
+### Step 7: Update CLAUDE.md
 
 **Update: `CLAUDE.md`**
-- Add Ktor and kotlinx-serialization to dependencies section
-- Document the MVP architecture pattern
+- Add Ktor, kotlinx-serialization, and Koin to dependencies section
+- Document the MVVM architecture pattern with ViewModel
 - Add GitHub API integration details
+- Document Koin dependency injection setup
 - Document the filtering logic for GitHub Pages repos
 - Add notes about expect/actual for platform-specific code (URL opening)
 
@@ -164,15 +211,17 @@ actual fun openUrl(url: String) {
 composeApp/src/
 ├── commonMain/kotlin/com/alorma/playground/
 │   ├── App.kt (UPDATED - Main UI with Scaffold + LazyColumn)
-│   ├── main.kt (NO CHANGE)
+│   ├── main.kt (UPDATED - Initialize Koin)
 │   ├── data/
 │   │   ├── model/
 │   │   │   └── GitHubRepository.kt (NEW)
 │   │   └── api/
 │   │       ├── GitHubApi.kt (NEW)
 │   │       └── GitHubApiImpl.kt (NEW)
+│   ├── di/
+│   │   └── AppModule.kt (NEW - Koin module)
 │   ├── presentation/
-│   │   └── RepositoryListPresenter.kt (NEW)
+│   │   └── RepositoryListViewModel.kt (NEW - ViewModel)
 │   ├── ui/
 │   │   └── RepositoryListItem.kt (NEW)
 │   └── platform/
@@ -182,7 +231,7 @@ composeApp/src/
         └── UrlOpener.kt (NEW - actual)
 
 gradle/
-└── libs.versions.toml (UPDATED - add Ktor, serialization)
+└── libs.versions.toml (UPDATED - add Ktor, serialization, Koin)
 
 composeApp/
 └── build.gradle.kts (UPDATED - add dependencies, serialization plugin)
@@ -192,15 +241,17 @@ CLAUDE.md (UPDATED - add implementation details)
 
 ## Implementation Order
 
-1. Update `libs.versions.toml` with new versions
-2. Update `composeApp/build.gradle.kts` with dependencies and plugin
+1. Update `libs.versions.toml` with new versions (Ktor, kotlinx-serialization, Koin)
+2. Update `composeApp/build.gradle.kts` with dependencies and serialization plugin
 3. Create data models (`GitHubRepository.kt`)
 4. Create API interface and implementation (`GitHubApi.kt`, `GitHubApiImpl.kt`)
-5. Create presenter with state management (`RepositoryListPresenter.kt`)
-6. Create platform-specific URL opener (expect/actual)
-7. Create UI components (`RepositoryListItem.kt`)
-8. Update `App.kt` with main UI
-9. Update `CLAUDE.md` with new architecture details
+5. Create Koin DI module (`AppModule.kt`)
+6. Create ViewModel with state management (`RepositoryListViewModel.kt`)
+7. Update `main.kt` to initialize Koin
+8. Create platform-specific URL opener (expect/actual)
+9. Create UI components (`RepositoryListItem.kt`)
+10. Update `App.kt` with main UI and Koin integration
+11. Update `CLAUDE.md` with new architecture details
 
 ## Testing Strategy
 
