@@ -1,5 +1,5 @@
 package com.alorma.playground.navigation
 
 interface NavigationDelegate {
-    fun openUrl(url: String)
+  fun openUrl(url: String)
 }
