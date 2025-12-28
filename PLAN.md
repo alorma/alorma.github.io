@@ -1,261 +1,227 @@
-# GitHub Pages Repository Aggregator - Implementation Plan
+# GitHub Pages Repository Aggregator - Implementation Status
 
-## Current State
+## ✅ COMPLETED - Current Implementation
 
-**Existing Structure:**
-- Simple Compose Multiplatform WASM project
-- App.kt is currently empty (just MaterialTheme wrapper)
-- No dependencies for networking or data handling yet
-- No platform-specific implementations in wasmJsMain
-- Uses Kotlin 2.3.0, Compose Multiplatform 1.9.3
-- Already has lifecycle-viewmodel-compose and lifecycle-runtime-compose
+### Architecture
 
-## Requirements
+The application is fully implemented with **Clean Architecture + MVVM** pattern:
 
-**Tech Stack:**
-- UI: Standard Compose Material3 components
-- Data Layer: Ktor HTTP client
-- Architecture: MVVM (Model-View-ViewModel)
-- Dependency Injection: Koin Multiplatform
-- State Management: ViewModel with StateFlow
+- ✅ **Domain Layer** - Business logic isolated from implementation details
+- ✅ **Data Layer** - Repository pattern with interface-based data sources
+- ✅ **Presentation Layer** - ViewModels with reactive state management
+- ✅ **UI Layer** - Compose Material3 components
+- ✅ **Dependency Injection** - Modular Koin setup with expect/actual for platform-specific modules
 
-**Features:**
-- Query GitHub repositories for user "alorma"
-- Filter repos with GitHub Pages enabled
-- Filter repos with URLs containing "alorma.github.io"
-- Display as simple list with:
-  - Repo title
-  - Repo pages URL as subtitle
-  - Click action to open URL
+### Completed Features
 
-**UI Design:**
-- Scaffold with LazyColumn
-- Simple list items showing title and URL
+#### ✅ Dynamic Username Detection
+- Parses username from URL hostname (`username.github.io`)
+- Localhost support with default fallback to "alorma"
+- Error screen for invalid URLs
 
-## Confirmed Approach
+#### ✅ Repository Display
+- LazyColumn with Card-based list items
+- Shows repository name, description, and GitHub Pages URL
+- Material3 theming with proper typography
 
-✅ **UI**: Standard Compose Material3 components (Scaffold, LazyColumn, ListItem)
-✅ **API**: GitHub REST API v3 - GET /users/alorma/repos
-✅ **Filtering**: Check "homepage" field contains "alorma.github.io"
-✅ **Architecture**: MVVM with ViewModel and StateFlow
-✅ **Dependency Injection**: Koin Multiplatform
+#### ✅ Repository Filtering
+- Filters repositories by GitHub Pages URL pattern
+- Only shows repos with URLs containing `username.github.io`
+- Filtering logic in domain layer (use case)
 
-## Implementation Plan
+#### ✅ Navigation
+- Click handling on repository cards
+- Opens GitHub Pages in new browser tab
+- Platform-specific navigation via NavigationDelegate
 
-### Step 1: Update Dependencies
+#### ✅ State Management
+- Flow-based reactive state in ViewModel
+- Loading, Success, and Error states
+- Automatic error handling with `.catch()` operator
+- StateFlow with lifecycle-aware collection
 
-**Files to modify:**
-- `gradle/libs.versions.toml` - Add versions for Ktor and kotlinx-serialization
-- `composeApp/build.gradle.kts` - Add dependencies
+### Implemented Layers
 
-**New dependencies needed:**
-- Ktor client core
-- Ktor client for WASM (JS engine)
-- Ktor content negotiation
-- Ktor serialization (kotlinx.json)
-- kotlinx-serialization-json
-- kotlinx-serialization plugin
-- Koin core
-- Koin compose multiplatform
-
-**Versions:**
-- Ktor: 3.0.3 (latest with WASM support)
-- kotlinx-serialization: 1.7.3
-- Koin: 4.0.0 (multiplatform support)
-
-### Step 2: Data Layer (Model)
-
-**Create: `composeApp/src/commonMain/kotlin/com/alorma/playground/data/model/GitHubRepository.kt`**
-```kotlin
-@Serializable
-data class GitHubRepository(
-    val name: String,
-    val full_name: String,
-    val html_url: String,
-    val homepage: String?,
-    val description: String?
-)
+#### Domain Layer (`commonMain`)
+```
+domain/
+├── model/Repository.kt - Domain model
+├── datasource/RepositoryDataSource.kt - Data source interface
+├── usecase/GetGitHubPagesRepositoriesUseCase.kt - Filtering logic
+└── di/DomainModule.kt - Koin DI configuration
 ```
 
-**Create: `composeApp/src/commonMain/kotlin/com/alorma/playground/data/api/GitHubApi.kt`**
-- Interface defining `suspend fun getRepositories(username: String): List<GitHubRepository>`
-
-**Create: `composeApp/src/commonMain/kotlin/com/alorma/playground/data/api/GitHubApiImpl.kt`**
-- Implement using Ktor HttpClient
-- Endpoint: `https://api.github.com/users/alorma/repos`
-- Configure JSON serialization
-- Handle errors gracefully
-
-### Step 3: Dependency Injection Setup (Koin)
-
-**Create: `composeApp/src/commonMain/kotlin/com/alorma/playground/di/AppModule.kt`**
-```kotlin
-val appModule = module {
-    single<GitHubApi> { GitHubApiImpl(get()) }
-    single {
-        HttpClient {
-            install(ContentNegotiation) {
-                json(Json {
-                    ignoreUnknownKeys = true
-                })
-            }
-        }
-    }
-    viewModel { RepositoryListViewModel(get()) }
-}
+#### Data Layer (`commonMain`)
+```
+data/
+├── datasource/FakeRepositoryDataSource.kt - Mock implementation with test data
+└── di/DataModule.kt - Koin DI configuration
 ```
 
-**Update: `composeApp/src/commonMain/kotlin/com/alorma/playground/main.kt`**
-- Initialize Koin before starting the app
-```kotlin
-fun main() {
-    startKoin {
-        modules(appModule)
-    }
-    ComposeViewport {
-        App()
-    }
-}
+#### UI Layer (`commonMain`)
+```
+ui/
+├── RepositoriesScreen.kt - Main screen with state handling
+├── RepositoriesViewModel.kt - State management with Flow
+├── RepositoryListItem.kt - Card component for list items
+└── di/UiModule.kt - Koin DI configuration
 ```
 
-### Step 4: Presentation Layer (ViewModel)
+#### Navigation Layer (`commonMain` + `wasmJsMain`)
+```
+commonMain/navigation/
+└── NavigationDelegate.kt - Platform-agnostic interface
 
-**Create: `composeApp/src/commonMain/kotlin/com/alorma/playground/presentation/RepositoryListViewModel.kt`**
-```kotlin
-class RepositoryListViewModel(
-    private val api: GitHubApi
-) : ViewModel() {
-    private val _state = MutableStateFlow<UiState>(UiState.Loading)
-    val state: StateFlow<UiState> = _state
-
-    init {
-        loadRepositories()
-    }
-
-    fun loadRepositories() {
-        viewModelScope.launch {
-            _state.value = UiState.Loading
-            try {
-                val repos = api.getRepositories("alorma")
-                val filtered = repos.filter {
-                    it.homepage?.contains("alorma.github.io") == true
-                }
-                _state.value = UiState.Success(filtered)
-            } catch (e: Exception) {
-                _state.value = UiState.Error(e.message ?: "Unknown error")
-            }
-        }
-    }
-}
-
-sealed class UiState {
-    object Loading : UiState()
-    data class Success(val repositories: List<GitHubRepository>) : UiState()
-    data class Error(val message: String) : UiState()
-}
+wasmJsMain/navigation/
+└── WasmNavigationDelegate.kt - WASM implementation with window.open()
 ```
 
-### Step 5: View Layer (UI)
+#### Platform Layer (expect/actual pattern)
+```
+commonMain/platform/
+├── Platform.kt - expect class for platform utilities
+└── di/PlatformModule.kt - expect val platformModule: Module
 
-**Update: `composeApp/src/commonMain/kotlin/com/alorma/playground/App.kt`**
-- Create Scaffold with TopAppBar
-- Use LazyColumn for repository list
-- Show loading/error states
-- Inject ViewModel using Koin (`koinViewModel()`)
-- Collect state using `collectAsState()`
-
-**Create: `composeApp/src/commonMain/kotlin/com/alorma/playground/ui/RepositoryListItem.kt`**
-```kotlin
-@Composable
-fun RepositoryListItem(
-    repository: GitHubRepository,
-    onItemClick: (String) -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(repository.name) },
-        supportingContent = { Text(repository.homepage ?: "") },
-        modifier = Modifier.clickable {
-            repository.homepage?.let { onItemClick(it) }
-        }
-    )
-}
+wasmJsMain/platform/
+├── Platform.kt - actual class with window.open()
+└── di/PlatformModule.wasmJs.kt - actual module with WASM dependencies
 ```
 
-### Step 6: Platform-Specific URL Opening
-
-**Create: `composeApp/src/commonMain/kotlin/com/alorma/playground/platform/UrlOpener.kt`**
-```kotlin
-expect fun openUrl(url: String)
+#### Entry Point (`wasmJsMain`)
+```
+wasmJsMain/
+├── kotlin/com/alorma/playground/
+│   └── main.kt - URL parsing, Koin setup, ComposeViewport
+└── resources/
+    ├── index.html - HTML entry point
+    └── styles.css - CSS styles
 ```
 
-**Create: `composeApp/src/wasmJsMain/kotlin/com/alorma/playground/platform/UrlOpener.kt`**
-```kotlin
-actual fun openUrl(url: String) {
-    kotlinx.browser.window.open(url, "_blank")
-}
-```
+### Technical Implementation Details
 
-### Step 7: Update CLAUDE.md
+#### Dependency Injection
+- Modular Koin structure with layer-specific modules
+- expect/actual pattern for platform-specific dependencies
+- ViewModel injection with parameters (username)
+- Automatic dependency resolution
 
-**Update: `CLAUDE.md`**
-- Add Ktor, kotlinx-serialization, and Koin to dependencies section
-- Document the MVVM architecture pattern with ViewModel
-- Add GitHub API integration details
-- Document Koin dependency injection setup
-- Document the filtering logic for GitHub Pages repos
-- Add notes about expect/actual for platform-specific code (URL opening)
+#### State Management
+- Flow-based state with `stateIn()` for hot state
+- `SharingStarted.WhileSubscribed(5000)` for lifecycle awareness
+- Sealed interface for type-safe state handling
+- Automatic error handling with `.catch()` operator
 
-## File Structure
+#### Navigation
+- Interface-based navigation for testability
+- Platform-specific implementation via DI
+- ViewModel handles navigation logic
+- Opens URLs in new browser tabs
+
+## 🚧 TODO - Future Enhancements
+
+### GitHub API Integration (Ktor)
+
+Currently using `FakeRepositoryDataSource`. To add real GitHub API:
+
+1. **Add Dependencies**
+   - Ktor client core
+   - Ktor client JS engine (for WASM)
+   - Ktor content negotiation
+   - Ktor serialization (kotlinx.json)
+   - kotlinx-serialization-json
+   - Add serialization plugin to build.gradle.kts
+
+2. **Create API Models**
+   ```kotlin
+   @Serializable
+   data class GitHubRepoResponse(
+       val name: String,
+       val full_name: String,
+       val html_url: String,
+       val homepage: String?,
+       val description: String?
+   )
+   ```
+
+3. **Implement GitHubRepositoryDataSource**
+   ```kotlin
+   class GitHubRepositoryDataSource(
+       private val httpClient: HttpClient
+   ) : RepositoryDataSource {
+       override suspend fun getRepositories(username: String): List<Repository> {
+           val response = httpClient.get("https://api.github.com/users/$username/repos")
+           return response.body<List<GitHubRepoResponse>>().map { it.toDomain() }
+       }
+   }
+   ```
+
+4. **Update DataModule**
+   - Register HttpClient with JSON serialization
+   - Replace FakeRepositoryDataSource with GitHubRepositoryDataSource
+
+### UI Enhancements
+
+- Add Scaffold with TopAppBar showing current username
+- Add pull-to-refresh for repository list
+- Add loading shimmer effect instead of progress indicator
+- Add empty state when no repositories found
+- Add better error messaging with retry button
+
+### Testing
+
+- Unit tests for use case filtering logic
+- ViewModel state tests with fake use case
+- UI tests for RepositoriesScreen
+
+### Performance
+
+- Add caching for repository data
+- Implement pagination if user has many repos
+
+## Project Structure Overview
 
 ```
 composeApp/src/
 ├── commonMain/kotlin/com/alorma/playground/
-│   ├── App.kt (UPDATED - Main UI with Scaffold + LazyColumn)
-│   ├── main.kt (UPDATED - Initialize Koin)
-│   ├── data/
-│   │   ├── model/
-│   │   │   └── GitHubRepository.kt (NEW)
-│   │   └── api/
-│   │       ├── GitHubApi.kt (NEW)
-│   │       └── GitHubApiImpl.kt (NEW)
-│   ├── di/
-│   │   └── AppModule.kt (NEW - Koin module)
-│   ├── presentation/
-│   │   └── RepositoryListViewModel.kt (NEW - ViewModel)
-│   ├── ui/
-│   │   └── RepositoryListItem.kt (NEW)
-│   └── platform/
-│       └── UrlOpener.kt (NEW - expect)
-└── wasmJsMain/kotlin/com/alorma/playground/
-    └── platform/
-        └── UrlOpener.kt (NEW - actual)
-
-gradle/
-└── libs.versions.toml (UPDATED - add Ktor, serialization, Koin)
-
-composeApp/
-└── build.gradle.kts (UPDATED - add dependencies, serialization plugin)
-
-CLAUDE.md (UPDATED - add implementation details)
+│   ├── App.kt - Koin setup, Material theme, main screen
+│   ├── domain/ - Business logic (COMPLETED)
+│   ├── data/ - Data layer with fake source (COMPLETED)
+│   ├── ui/ - ViewModels and Composables (COMPLETED)
+│   ├── navigation/ - Navigation interface (COMPLETED)
+│   ├── platform/ - Platform utilities (expect) (COMPLETED)
+│   └── di/ - Root Koin module (COMPLETED)
+└── wasmJsMain/
+    ├── kotlin/com/alorma/playground/
+    │   ├── main.kt - Entry point, URL parsing (COMPLETED)
+    │   ├── navigation/ - WASM navigation (COMPLETED)
+    │   └── platform/ - WASM platform impl (COMPLETED)
+    └── resources/
+        ├── index.html (COMPLETED)
+        └── styles.css (COMPLETED)
 ```
 
-## Implementation Order
+## Key Design Decisions
 
-1. Update `libs.versions.toml` with new versions (Ktor, kotlinx-serialization, Koin)
-2. Update `composeApp/build.gradle.kts` with dependencies and serialization plugin
-3. Create data models (`GitHubRepository.kt`)
-4. Create API interface and implementation (`GitHubApi.kt`, `GitHubApiImpl.kt`)
-5. Create Koin DI module (`AppModule.kt`)
-6. Create ViewModel with state management (`RepositoryListViewModel.kt`)
-7. Update `main.kt` to initialize Koin
-8. Create platform-specific URL opener (expect/actual)
-9. Create UI components (`RepositoryListItem.kt`)
-10. Update `App.kt` with main UI and Koin integration
-11. Update `CLAUDE.md` with new architecture details
+1. **Clean Architecture**: Separation of concerns with clear layer boundaries
+2. **MVVM Pattern**: ViewModels manage state, Views observe and render
+3. **Koin DI**: Modular dependency injection with expect/actual for platforms
+4. **Flow-based State**: Reactive state management with automatic lifecycle handling
+5. **Interface-based Navigation**: Testable and platform-agnostic
+6. **Domain-First**: Business logic independent of UI and data implementation
+7. **Fake Data Source**: Allows UI development before API integration
 
-## Testing Strategy
+## Running the Application
 
-- Build and run the WASM app: `./gradlew composeApp:wasmJsBrowserDevelopmentRun`
-- Verify GitHub API calls work in browser console
-- Test filtering logic with different repositories
-- Test URL opening in new browser tabs
+```bash
+# Development mode
+./gradlew composeApp:wasmJsBrowserDevelopmentRun
+
+# Production build
+./gradlew composeApp:wasmJsBrowserProductionWebpack
+
+# Access locally
+# http://localhost:8080 (will use "alorma" as default user)
+
+# Simulate GitHub Pages environment
+# Deploy to username.github.io or modify /etc/hosts to test subdomain parsing
+```

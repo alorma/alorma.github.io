@@ -45,6 +45,7 @@ fun RepositoriesScreen(
           items(currentState.repositories) { repository ->
             RepositoryListItem(
               repository = repository,
+              onClick = { viewModel.onRepositoryClick(repository) },
               modifier = Modifier.fillMaxWidth()
             )
           }

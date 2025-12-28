@@ -28,6 +28,10 @@ class RepositoriesViewModel(
     started = SharingStarted.WhileSubscribed(5000),
     initialValue = UiState.Loading
   )
+
+  fun onRepositoryClick(repository: Repository) {
+    navigationDelegate.openUrl(repository.pagesUrl)
+  }
 }
 
 sealed interface UiState {
