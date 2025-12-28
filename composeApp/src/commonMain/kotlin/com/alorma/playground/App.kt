@@ -2,10 +2,22 @@ package com.alorma.playground
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import com.alorma.playground.di.appModule
+import org.koin.compose.KoinMultiplatformApplication
+import org.koin.core.annotation.KoinExperimentalAPI
+import org.koin.dsl.koinConfiguration
 
+@OptIn(KoinExperimentalAPI::class)
 @Composable
-fun App() {
-  MaterialTheme {
+fun App(
+  modifier: Modifier = Modifier,
+) {
+  KoinMultiplatformApplication(
+    config = koinConfiguration { modules(appModule) },
+  ) {
+    MaterialTheme {
 
+    }
   }
 }
