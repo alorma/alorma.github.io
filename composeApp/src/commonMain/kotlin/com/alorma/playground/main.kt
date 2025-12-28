@@ -44,6 +44,12 @@ private fun NoUserDefined() {
 
 private fun parseUsernameFromUrl(): String? {
   val hostname = window.location.hostname
+
+  // Development mode: default to "alorma" when running on localhost
+  if (hostname == "localhost" || hostname == "127.0.0.1") {
+    return "alorma"
+  }
+
   // Extract username from subdomain pattern: username.github.io
   if (hostname.endsWith(".github.io")) {
     val username = hostname.removeSuffix(".github.io")
@@ -51,5 +57,6 @@ private fun parseUsernameFromUrl(): String? {
       return username
     }
   }
+
   return null
 }

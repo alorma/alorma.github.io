@@ -9,11 +9,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
-fun RepositoryScreen(
+fun RepositoriesScreen(
   username: String,
-  viewModel: RepositoryViewModel = koinViewModel()
+  modifier: Modifier = Modifier,
+  viewModel: RepositoriesViewModel = koinViewModel { parametersOf(username) },
 ) {
   Box(
     modifier = Modifier.fillMaxSize().padding(16.dp),

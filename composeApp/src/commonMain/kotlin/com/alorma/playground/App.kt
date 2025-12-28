@@ -4,11 +4,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.alorma.playground.di.appModule
-import com.alorma.playground.ui.RepositoryScreen
+import com.alorma.playground.ui.RepositoriesScreen
 import org.koin.compose.KoinMultiplatformApplication
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.dsl.koinConfiguration
 
+@Suppress("ModifierTopMost")
 @OptIn(KoinExperimentalAPI::class)
 @Composable
 fun App(
@@ -22,7 +23,10 @@ fun App(
     },
   ) {
     MaterialTheme {
-      RepositoryScreen(username = username)
+      RepositoriesScreen(
+        modifier = modifier,
+        username = username,
+      )
     }
   }
 }
