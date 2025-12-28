@@ -72,7 +72,7 @@ All code is organized under the `com.alorma.playground` package.
 - Kotlin/Wasm-JS (WebAssembly)
 - Gradle 8.5
 - Compose for Web (declarative UI with canvas rendering)
-- Skiko 0.7.89.1 (Skia graphics engine for Kotlin)
+- Skiko (Skia graphics engine for Kotlin)
 
 ## Development
 
@@ -83,8 +83,8 @@ The project uses Compose Multiplatform's experimental WebAssembly support, which
 Due to an issue with early Compose for Wasm support, the Skiko resources need to be manually copied for production builds. After running `./gradlew compileProductionExecutableKotlinWasmJs`, execute:
 
 ```bash
-# Extract and copy Skiko resources
-jar xf ~/.gradle/caches/modules-2/files-2.1/org.jetbrains.skiko/skiko-js-wasm-runtime/0.7.89.1/*/skiko-js-wasm-runtime-0.7.89.1.jar skiko.mjs skiko.wasm
+# Extract and copy Skiko resources (version number may vary based on Compose version)
+jar xf ~/.gradle/caches/modules-2/files-2.1/org.jetbrains.skiko/skiko-js-wasm-runtime/*/*/skiko-js-wasm-runtime-*.jar skiko.mjs skiko.wasm
 mkdir -p build/js/packages/alormaWebApp/kotlin
 cp skiko.* build/js/packages/alormaWebApp/kotlin/
 rm skiko.mjs skiko.wasm

@@ -42,6 +42,8 @@ kotlin {
 }
 
 // Workaround for skiko.mjs issue in wasm builds
+// Note: The path 'js/packages/${project.name}/kotlin' is the standard Gradle Kotlin/JS output directory
+// for webpack builds. If this breaks in future Gradle versions, update to match the new output structure.
 tasks.register<Copy>("copySkikoResources") {
     val webpackDir = File(project.layout.buildDirectory.asFile.get(), "js/packages/${project.name}/kotlin")
     
