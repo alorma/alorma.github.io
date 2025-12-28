@@ -45,10 +45,9 @@ The app serves as a dashboard to quickly navigate between all GitHub Pages proje
 - **composeApp/** - Main application module
   - **src/commonMain/kotlin/** - Shared Kotlin code for all targets
     - `com.alorma.playground` - Main application package
-      - `App.kt` - Main Compose UI entry point
+      - `App.kt` - Main Compose UI entry point with repository list display
       - `main.kt` - Application entry point using `ComposeViewport`
-      - `Greeting.kt` - Example greeting functionality
-  - **src/wasmJsMain/kotlin/** - WASM-specific implementations
+  - **src/wasmJsMain/kotlin/** - WASM-specific implementations (GitHub API calls)
   - **src/commonMain/resources/** - Web resources (HTML, CSS)
 
 ### Build System
@@ -80,14 +79,40 @@ All dependencies are defined in `gradle/libs.versions.toml` and referenced using
 - Compose resources and UI tooling preview
 - Lifecycle ViewModel and Runtime Compose
 
+## Application Features
+
+### GitHub Integration
+
+- **Target User**: `alorma` (GitHub username)
+- **Target Domain**: `alorma.github.io`
+- **Filtering Logic**: Only shows repositories with:
+  - GitHub Pages enabled
+  - Website URL containing `alorma.github.io`
+
+### Expected Architecture Components
+
+When implementing features, consider:
+- **GitHub API Client** - HTTP client for GitHub REST/GraphQL API (needs to be added)
+- **Repository Model** - Data classes for GitHub repository responses
+- **Filtering Logic** - Filter repos by GitHub Pages enabled and URL pattern
+- **UI Components** - List/Grid display of repository cards with clickable links
+- **State Management** - ViewModel to manage repository data and loading states
+
 ## Development Workflow
 
 When adding new features:
 1. Add shared code in `composeApp/src/commonMain/kotlin/`
 2. Add platform-specific implementations in `composeApp/src/wasmJsMain/kotlin/` if needed
-3. Use `expect`/`actual` declarations for platform-specific APIs
+3. Use `expect`/`actual` declarations for platform-specific APIs (e.g., HTTP client)
 4. Resources go in `composeApp/src/commonMain/resources/`
 5. Run tests with `./gradlew check` before committing
+
+### GitHub API Considerations
+
+- Use GitHub REST API v3 or GraphQL API v4
+- Public API endpoints don't require authentication for public repos
+- Rate limiting: 60 requests/hour for unauthenticated, 5000 for authenticated
+- Consider adding a GitHub token for higher rate limits if needed
 
 ## Testing
 
