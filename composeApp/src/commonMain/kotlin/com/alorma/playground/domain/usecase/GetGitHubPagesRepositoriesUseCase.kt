@@ -8,8 +8,13 @@ class GetGitHubPagesRepositoriesUseCase(
 ) {
   suspend fun obtain(username: String): List<Repository> {
     val repositories = repositoryDataSource.getRepositories(username)
+    val rootPagesUrl = "https://$username.github.io"
+
     return repositories.filter { repository ->
-      repository.pagesUrl.contains("$username.github.io")
+      val url = repository.pagesUrl.trimEnd('/')
+      // Include repos with pages URLs containing username.github.io
+      // but exclude the root repository (username.github.io itself)
+      repository.pagesUrl.contains("$username.github.io") && url != rootPagesUrl
     }
   }
 }
