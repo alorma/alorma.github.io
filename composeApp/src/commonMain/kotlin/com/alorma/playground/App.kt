@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.alorma.playground.di.appModule
+import com.alorma.playground.ui.RepositoryScreen
 import org.koin.compose.KoinMultiplatformApplication
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.dsl.koinConfiguration
@@ -21,7 +22,7 @@ fun App(
     },
   ) {
     MaterialTheme {
-      // Main content will go here
+      RepositoryScreen(username = username)
     }
   }
 }
