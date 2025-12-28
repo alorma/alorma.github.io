@@ -1,0 +1,46 @@
+name: Main
+
+on:
+  push:
+    branches:
+      - main
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  checks: write
+  statuses: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: adopt
+          java-version: 17
+
+      - name: Build ${{ matrix.config.target }} - Main
+        continue-on-error: false
+        run: ./gradlew :composeApp:wasmJsBrowserDistribution
+
+      - name: Copy webApp to dist
+        run: cp -r composeApp/build/dist/wasmJs/productionExecutable deployment/
+
+      - name: Upload your page as github pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: deployment/
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
