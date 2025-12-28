@@ -1,7 +1,9 @@
 package com.alorma.playground.domain.di
 
+import com.alorma.playground.domain.usecase.GetGitHubPagesRepositoriesUseCase
+import org.koin.core.module.dsl.factoryOf
 import org.koin.dsl.module
 
 val domainModule = module {
-    // Domain layer dependencies (use cases, business logic) will be added here
+  factoryOf(::GetGitHubPagesRepositoriesUseCase)
 }
