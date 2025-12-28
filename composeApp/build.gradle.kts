@@ -37,6 +37,10 @@ kotlin {
 
       // Serialization
       implementation(libs.kotlinx.serialization.json)
+
+      // Settings
+      implementation(libs.multiplatform.settings)
+      implementation(libs.multiplatform.settings.noArg)
     }
 
     wasmJsMain.dependencies {

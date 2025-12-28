@@ -1,15 +1,9 @@
 package com.alorma.playground.ui.di
 
 import com.alorma.playground.ui.RepositoriesViewModel
-import org.koin.core.module.dsl.viewModel
+import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val uiModule = module {
-  viewModel { params ->
-    RepositoriesViewModel(
-      username = params.get(),
-      getGitHubPagesRepositoriesUseCase = get(),
-      navigationDelegate = get()
-    )
-  }
+  viewModelOf(::RepositoriesViewModel)
 }
